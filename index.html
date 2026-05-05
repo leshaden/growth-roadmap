@@ -230,7 +230,7 @@
 
 <script>
   // Твой новый URL Google Apps Script
-  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXslHhtX6tD4cYWFx9p-X2BZG4z2tVDkuDxBpJh5sUTmHJq_5Obfrva8gq_ZZM3pSXIA/exec';
+  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUz_lavYGE7visfollw6Kf3GYlyvl3hnp6FcyKopLDN5_9nrdVCkApuKw7qRUQc8oWKw/exec';
 
   let milestonesCache = [];
   let editingId = null;
@@ -265,7 +265,7 @@
 
   // Универсальный вызов API с Google Apps Script
   async function api(action, payload = {}) {
-    const res = await fetch(GOOGLE_SCRIPT_URL, {
+    const res = await fetch(, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
