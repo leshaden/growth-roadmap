@@ -234,248 +234,248 @@
     </div>
   </div>
 
-  <script>
-    // ВСТАВЬ СЮДА СВОЮ ССЫЛКУ WEB APP ИЗ GOOGLE APPS SCRIPT
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwUz_lavYGE7visfollw6Kf3GYlyvl3hnp6FcyKopLDN5_9nrdVCkApuKw7qRUQc8oWKw/exec';
+<script>
+  // ВСТАВЬ СЮДА СВОЮ ССЫЛКУ WEB APP ИЗ GOOGLE APPS SCRIPT
+  const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOkFgwqFSYa5wOmOcYB5thYaq71sgd1cV9Vv038zh2iYgWdMgDFT393y7AEqkVE19VUQ/exec';
 
-    let milestonesCache = [];
-    let editingId = null;
+  let milestonesCache = [];
+  let editingId = null;
 
-    function scrollToRoadmap() {
-      document.getElementById('roadmap').scrollIntoView({ behavior: 'smooth' });
-    }
+  function scrollToRoadmap() {
+    document.getElementById('roadmap').scrollIntoView({ behavior: 'smooth' });
+  }
 
-    function scrollToGoal() {
-      document.getElementById('goal').scrollIntoView({ behavior: 'smooth' });
-    }
+  function scrollToGoal() {
+    document.getElementById('goal').scrollIntoView({ behavior: 'smooth' });
+  }
 
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-    }
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
 
-    function statusLabel(status) {
-      if (status === 'completed') return 'Завершён';
-      if (status === 'inprogress') return 'В работе';
-      return 'Не начат';
-    }
+  function statusLabel(status) {
+    if (status === 'completed') return 'Завершён';
+    if (status === 'inprogress') return 'В работе';
+    return 'Не начат';
+  }
 
-    function statusIcon(status) {
-      if (status === 'completed') return `<i class="fa-solid fa-check"></i>`;
-      if (status === 'inprogress') return `<i class="fa-solid fa-circle-half-stroke"></i>`;
-      return `<i class="fa-regular fa-square"></i>`;
-    }
+  function statusIcon(status) {
+    if (status === 'completed') return `<i class="fa-solid fa-check"></i>`;
+    if (status === 'inprogress') return `<i class="fa-solid fa-circle-half-stroke"></i>`;
+    return `<i class="fa-regular fa-square"></i>`;
+  }
 
-    async function api(action, payload = {}) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+  async function api(action, payload = {}) {
+    const body = new URLSearchParams();
+    body.append('payload', JSON.stringify({ action, ...payload }));
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        body,
+        signal: controller.signal,
+      });
+
+      const text = await res.text();
+
+      let json;
       try {
-        const res = await fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ action, ...payload }),
-          signal: controller.signal,
-        });
-
-        const text = await res.text();
-
-        let json;
-        try {
-          json = JSON.parse(text);
-        } catch (e) {
-          throw new Error('Сервер вернул не JSON: ' + text.slice(0, 200));
-        }
-
-        if (!res.ok) {
-          throw new Error(json.error || ('HTTP ошибка ' + res.status));
-        }
-
-        if (!json.ok) {
-          throw new Error(json.error || 'Ошибка API');
-        }
-
-        return json;
-      } finally {
-        clearTimeout(timeout);
+        json = JSON.parse(text);
+      } catch (e) {
+        throw new Error('Сервер вернул не JSON: ' + text.slice(0, 200));
       }
+
+      if (!res.ok) {
+        throw new Error(json.error || ('HTTP ошибка ' + res.status));
+      }
+
+      if (!json.ok) {
+        throw new Error(json.error || 'Ошибка API');
+      }
+
+      return json;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  async function loadMilestones() {
+    const container = document.getElementById('milestones');
+    try {
+      container.innerHTML = `<div class="text-gray-400">Загрузка...</div>`;
+      const json = await api('get');
+      milestonesCache = Array.isArray(json.data) ? json.data : [];
+      renderMilestones();
+      updateProgress();
+    } catch (err) {
+      console.error('Ошибка загрузки этапов:', err);
+      container.innerHTML = `<div class="text-red-400">Не удалось загрузить данные: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function renderMilestones() {
+    const container = document.getElementById('milestones');
+
+    if (!milestonesCache.length) {
+      container.innerHTML = `<div class="text-gray-400">Пока нет этапов. Нажми “Добавить этап”.</div>`;
+      return;
     }
 
-    async function loadMilestones() {
-      const container = document.getElementById('milestones');
-      try {
-        container.innerHTML = `<div class="text-gray-400">Загрузка...</div>`;
-        const json = await api('get');
-        milestonesCache = Array.isArray(json.data) ? json.data : [];
-        renderMilestones();
-        updateProgress();
-      } catch (err) {
-        console.error('Ошибка загрузки этапов:', err);
-        container.innerHTML = `<div class="text-red-400">Не удалось загрузить данные: ${escapeHtml(err.message)}</div>`;
-      }
-    }
-
-    function renderMilestones() {
-      const container = document.getElementById('milestones');
-
-      if (!milestonesCache.length) {
-        container.innerHTML = `<div class="text-gray-400">Пока нет этапов. Нажми “Добавить этап”.</div>`;
-        return;
-      }
-
-      container.innerHTML = milestonesCache.map(m => `
-        <div class="glass p-6 md:p-7 rounded">
-          <div class="flex gap-4 flex-wrap md:flex-nowrap">
-            <button type="button" onclick="toggleStatus(${Number(m.id)})" class="mt-1 text-xl flex-shrink-0">
-              ${statusIcon(m.status)}
-            </button>
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 flex-wrap">
-                <div>
-                  <div class="flex items-center gap-3 mb-2 flex-wrap">
-                    <h3 class="text-xl font-semibold truncate max-w-[calc(100%-100px)]">${escapeHtml(m.title)}</h3>
-                    <span class="text-xs uppercase tracking-[0.22em] text-gray-500">${statusLabel(m.status)}</span>
-                  </div>
-                  <p class="text-gray-400 whitespace-pre-wrap leading-relaxed max-w-full">${escapeHtml(m.desc || '')}</p>
+    container.innerHTML = milestonesCache.map(m => `
+      <div class="glass p-6 md:p-7 rounded">
+        <div class="flex gap-4 flex-wrap md:flex-nowrap">
+          <button type="button" onclick="toggleStatus(${Number(m.id)})" class="mt-1 text-xl flex-shrink-0">
+            ${statusIcon(m.status)}
+          </button>
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 flex-wrap">
+              <div>
+                <div class="flex items-center gap-3 mb-2 flex-wrap">
+                  <h3 class="text-xl font-semibold truncate max-w-[calc(100%-100px)]">${escapeHtml(m.title)}</h3>
+                  <span class="text-xs uppercase tracking-[0.22em] text-gray-500">${statusLabel(m.status)}</span>
                 </div>
+                <p class="text-gray-400 whitespace-pre-wrap leading-relaxed max-w-full">${escapeHtml(m.desc || '')}</p>
+              </div>
 
-                <div class="flex gap-2 flex-wrap shrink-0">
-                  <button type="button" onclick="openEditModal(${Number(m.id)})" class="square-btn px-4 py-2 text-sm whitespace-nowrap">
-                    <i class="fa-solid fa-pen mr-2"></i>Редактировать
-                  </button>
-                  <button type="button" onclick="removeMilestone(${Number(m.id)})" class="square-btn px-4 py-2 text-sm whitespace-nowrap">
-                    <i class="fa-solid fa-trash mr-2"></i>Удалить
-                  </button>
-                </div>
+              <div class="flex gap-2 flex-wrap shrink-0">
+                <button type="button" onclick="openEditModal(${Number(m.id)})" class="square-btn px-4 py-2 text-sm whitespace-nowrap">
+                  <i class="fa-solid fa-pen mr-2"></i>Редактировать
+                </button>
+                <button type="button" onclick="removeMilestone(${Number(m.id)})" class="square-btn px-4 py-2 text-sm whitespace-nowrap">
+                  <i class="fa-solid fa-trash mr-2"></i>Удалить
+                </button>
               </div>
             </div>
           </div>
         </div>
-      `).join('');
-    }
+      </div>
+    `).join('');
+  }
 
-    function updateProgress() {
-      const completed = milestonesCache.filter(m => m.status === 'completed').length;
-      const total = milestonesCache.length;
-      const percent = total ? Math.round((completed / total) * 100) : 0;
+  function updateProgress() {
+    const completed = milestonesCache.filter(m => m.status === 'completed').length;
+    const total = milestonesCache.length;
+    const percent = total ? Math.round((completed / total) * 100) : 0;
 
-      document.getElementById('progress-bar').style.width = percent + '%';
-      document.getElementById('progress-text').textContent = percent + '%';
-      document.getElementById('done-count').textContent = completed;
-      document.getElementById('total-count').textContent = total;
-    }
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-text').textContent = percent + '%';
+    document.getElementById('done-count').textContent = completed;
+    document.getElementById('total-count').textContent = total;
+  }
 
-    async function toggleStatus(id) {
-      try {
-        const item = milestonesCache.find(m => Number(m.id) === Number(id));
-        if (!item) return;
-
-        if (item.status === 'pending') item.status = 'inprogress';
-        else if (item.status === 'inprogress') item.status = 'completed';
-        else item.status = 'pending';
-
-        await api('update', { milestone: item });
-        await loadMilestones();
-      } catch (err) {
-        alert('Ошибка смены статуса: ' + err.message);
-      }
-    }
-
-    async function removeMilestone(id) {
-      if (!confirm('Удалить этап?')) return;
-      try {
-        await api('delete', { id });
-        await loadMilestones();
-      } catch (err) {
-        alert('Ошибка удаления: ' + err.message);
-      }
-    }
-
-    function openAddModal() {
-      editingId = null;
-      document.getElementById('modalTitle').textContent = 'Добавить этап';
-      document.getElementById('titleInput').value = '';
-      document.getElementById('descInput').value = '';
-      document.getElementById('statusInput').value = 'pending';
-      showModal();
-    }
-
-    function openEditModal(id) {
+  async function toggleStatus(id) {
+    try {
       const item = milestonesCache.find(m => Number(m.id) === Number(id));
       if (!item) return;
 
-      editingId = Number(id);
-      document.getElementById('modalTitle').textContent = 'Редактировать этап';
-      document.getElementById('titleInput').value = item.title || '';
-      document.getElementById('descInput').value = item.desc || '';
-      document.getElementById('statusInput').value = item.status || 'pending';
-      showModal();
+      if (item.status === 'pending') item.status = 'inprogress';
+      else if (item.status === 'inprogress') item.status = 'completed';
+      else item.status = 'pending';
+
+      await api('update', { milestone: item });
+      await loadMilestones();
+    } catch (err) {
+      alert('Ошибка смены статуса: ' + err.message);
+    }
+  }
+
+  async function removeMilestone(id) {
+    if (!confirm('Удалить этап?')) return;
+    try {
+      await api('delete', { id });
+      await loadMilestones();
+    } catch (err) {
+      alert('Ошибка удаления: ' + err.message);
+    }
+  }
+
+  function openAddModal() {
+    editingId = null;
+    document.getElementById('modalTitle').textContent = 'Добавить этап';
+    document.getElementById('titleInput').value = '';
+    document.getElementById('descInput').value = '';
+    document.getElementById('statusInput').value = 'pending';
+    showModal();
+  }
+
+  function openEditModal(id) {
+    const item = milestonesCache.find(m => Number(m.id) === Number(id));
+    if (!item) return;
+
+    editingId = Number(id);
+    document.getElementById('modalTitle').textContent = 'Редактировать этап';
+    document.getElementById('titleInput').value = item.title || '';
+    document.getElementById('descInput').value = item.desc || '';
+    document.getElementById('statusInput').value = item.status || 'pending';
+    showModal();
+  }
+
+  function showModal() {
+    const modal = document.getElementById('modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeModal() {
+    const modal = document.getElementById('modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    editingId = null;
+  }
+
+  async function saveModal() {
+    const title = document.getElementById('titleInput').value.trim();
+    const desc = document.getElementById('descInput').value.trim();
+    const status = document.getElementById('statusInput').value;
+
+    if (!title) {
+      alert('Введите название этапа');
+      return;
     }
 
-    function showModal() {
-      const modal = document.getElementById('modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
+    try {
+      if (editingId !== null) {
+        const item = milestonesCache.find(m => Number(m.id) === Number(editingId));
+        if (!item) throw new Error('Не найден этап для редактирования');
 
-    function closeModal() {
-      const modal = document.getElementById('modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      editingId = null;
-    }
+        item.title = title;
+        item.desc = desc;
+        item.status = status;
 
-    async function saveModal() {
-      const title = document.getElementById('titleInput').value.trim();
-      const desc = document.getElementById('descInput').value.trim();
-      const status = document.getElementById('statusInput').value;
-
-      if (!title) {
-        alert('Введите название этапа');
-        return;
+        await api('update', { milestone: item });
+      } else {
+        await api('save', {
+          milestone: { title, desc, status }
+        });
       }
 
-      try {
-        if (editingId !== null) {
-          const item = milestonesCache.find(m => Number(m.id) === Number(editingId));
-          if (!item) throw new Error('Не найден этап для редактирования');
-
-          item.title = title;
-          item.desc = desc;
-          item.status = status;
-
-          await api('update', { milestone: item });
-        } else {
-          await api('save', {
-            milestone: { title, desc, status }
-          });
-        }
-
-        closeModal();
-        await loadMilestones();
-      } catch (err) {
-        alert('Ошибка сохранения: ' + err.message);
-      }
+      closeModal();
+      await loadMilestones();
+    } catch (err) {
+      alert('Ошибка сохранения: ' + err.message);
     }
+  }
 
-    window.addEventListener('click', (e) => {
-      const modal = document.getElementById('modal');
-      if (e.target === modal) closeModal();
-    });
+  window.addEventListener('click', (e) => {
+    const modal = document.getElementById('modal');
+    if (e.target === modal) closeModal();
+  });
 
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeModal();
-    });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
 
-    window.addEventListener('load', () => {
-      loadMilestones();
-    });
-  </script>
+  window.addEventListener('load', () => {
+    loadMilestones();
+  });
+</script>
 </body>
 </html>
