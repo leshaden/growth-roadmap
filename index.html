@@ -265,7 +265,7 @@
 
   // Универсальный вызов API с Google Apps Script
   async function api(action, payload = {}) {
-    const res = await fetch(, {
+    const res = await fetch(GOOGLE_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, ...payload }),
